@@ -72,7 +72,7 @@ float dbToLinear20(float x) {
 /**
  * @brief One pole low pass filter
  *
- * @details Implmentation of a single order low pass filter with unity gain
+ * @details Implementation of a single order low pass filter with unity gain
  *
  * H(z) = b0 / (1 + a1 * z^-1), b0 = 1 - a1
  *
@@ -90,7 +90,7 @@ float lowpass1(float in, float b0, float state) {
 /**
  * @brief One pole low pass filter in fixedpoint
  *
- * @details Implmentation of a single order low pass filter with unity gain
+ * @details Implementation of a single order low pass filter with unity gain
  *
  * H(z) = b0 / (1 + a1 * z^-1), b0 = 1 - a1
  *
