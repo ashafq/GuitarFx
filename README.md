@@ -7,7 +7,7 @@ Make guitar/bass effects with a
 # The Big Idea
 
 The biggest challenge in music is to have an _unique_ sound that defines *you*.
-However, your tone depends on the gears you buy, and you can only get that tone
+However, your tone depends on the gear you buy, and you can only get that tone
 by mixing and matching with whatever is available. What if you had a blank
 canvas to design your sound? What would you do with the possibility? What if
 the hardware and software was open-source?
