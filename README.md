@@ -58,5 +58,3 @@ The code is under GPLv3. See [LICENSE](LICENSE) for more info.
 
 This project is done on my free time and using my own resource. If you like
 this project and want to help out and contribute, I would really appreciate it.
-
-github: ashafq
