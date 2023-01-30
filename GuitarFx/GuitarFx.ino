@@ -60,11 +60,11 @@ Bounce pushbutton = Bounce(BUTTON_PIN, BUTTON_DEBOUNCE);
 IntervalTimer analogKnobTimer;
 
 // Timer handler for analog knobs
-static int vState[3] = {0,0,0};
+static int vState[3] = {0, 0, 0};
 void analogKnobHandler() {
   constexpr int vSmoothThreshold = 16; // Threshold for analog input difference
-  constexpr int vSmoothCoeff = 298; // Smooth LPF filter coefficient
-  constexpr int vSmoothQ = 9; // Smooth LPF filter shift factor
+  constexpr int vSmoothCoeff = 298;    // Smooth LPF filter coefficient
+  constexpr int vSmoothQ = 9;          // Smooth LPF filter shift factor
 
   // Invert value, since the knobs were wired backwards (-_-)
   constexpr int analogKnobBias = 1 << 10;
@@ -91,8 +91,8 @@ void analogKnobHandler() {
 #ifdef GFX_DEBUG
   Serial.print("analogKnob: ");
   for (int i = 0; i < 3; ++i) {
-  Serial.print(vState[i]);
-  Serial.print("\t");
+    Serial.print(vState[i]);
+    Serial.print("\t");
   }
   Serial.print('\n');
 #endif

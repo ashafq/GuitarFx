@@ -34,12 +34,13 @@ constexpr const T &clamp(const T &x, const T &minval, const T &maxval) {
 } // namespace std
 #endif
 
+namespace {
 /**
  * @brief Fast approximation to hyperbolic tangent function @p tanh
  * @param x Input value
  * @return float @p tanh(x)
  */
-inline float fastTanh(float x) {
+inline float tanhFast(float x) noexcept {
   x = std::clamp(x, -1.0F, 1.0F);
   return x * (1.5F - 0.5F * x * x);
 }
@@ -55,8 +56,31 @@ inline float fastTanh(float x) {
  * @return true If @p a and @p b are close
  * @return false If @p a and @p b are _not_ close
  */
-inline bool isClose(float a, float b, float threshold = 0x1.0p6F) {
+inline bool isClose(float a, float b, float threshold = 0x1.0p6F) noexcept {
   return std::abs(a - b) <= threshold;
+}
+
+namespace impl {
+union ieee_bits {
+  float f;
+  int32_t i;
+  explicit ieee_bits(float f_) : f{f_} {
+    static_assert(sizeof(float) == sizeof(int32_t),
+                  "Float and int32_t must have the same size");
+  }
+  explicit ieee_bits(int32_t i_) : i{i_} {}
+};
+} // namespace impl
+
+/**
+ * @brief Convert a linear value to decibel value
+ * @param[in] x A decibel value
+ * @return @p x converted to linear
+ */
+inline float db20Fast(float x) noexcept {
+  impl::ieee_bits z{x};
+  z.i -= 0x3f7893f5;
+  return static_cast<float>(z.i) * 0x1.815182p-21F;
 }
 
 /**
@@ -64,9 +88,10 @@ inline bool isClose(float a, float b, float threshold = 0x1.0p6F) {
  * @param[in] x A decibel value
  * @return @p x converted to linear
  */
-float dbToLinear20(float x) {
-  constexpr float D2L = 0x1.542a5a12e1c5ap-3F; // log2(10) / 20
-  return std::exp2(D2L * x);
+inline float undb20Fast(float x) noexcept {
+  impl::ieee_bits z{static_cast<int32_t>(0x1.542a5a56619bcp+20F * x) +
+                    0x3f7893f5};
+  return z.f;
 }
 
 /**
@@ -83,7 +108,7 @@ float dbToLinear20(float x) {
  * @param state Current filter state, Y(n-1)
  * @return float Output value, Y(n)
  */
-float lowpass1(float in, float b0, float state) {
+float lowpass1(float in, float b0, float state) noexcept {
   return (b0 * (in - state)) + state;
 }
 
@@ -108,4 +133,5 @@ int32_t lowpass1Fix(int32_t in, int32_t b0, int32_t state, int32_t q) {
   return ((b0 * (in - state)) >> q) + state;
 }
 
+} // namespace
 #endif // DSP_MATH_HPP_

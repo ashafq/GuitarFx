@@ -34,7 +34,7 @@
  *
  * @return float Input value distorted/wave-shaped
  */
-inline float distortClassA(float x) { return fastTanh(x); }
+inline float distortClassA(float x) { return tanhFast(x); }
 
 /**
  * @brief Emulate a class B style distortion, similar to class B
@@ -56,7 +56,7 @@ inline float distortClassB(float x) {
   auto u = std::abs(x);
 
   // Class B style distortion
-  auto v = HALF * fastTanh(TWO * (u - HALF)) + HALF;
+  auto v = HALF * tanhFast(TWO * (u - HALF)) + HALF;
 
   return std::copysign(v, x);
 }
@@ -78,7 +78,7 @@ public:
     case GAIN: {
       // Translate gain value to linear value from normalized [0,1)
       float dbValue = (60.0F * 0x1.0p-10F) * static_cast<float>(value);
-      float linValue = dbToLinear20(dbValue);
+      float linValue = undb20Fast(dbValue);
       fxParam_[GAIN].setTarget(linValue);
     } break;
     case TONE: {
