@@ -4,15 +4,15 @@ Make guitar/bass effects with a
 [Teensy](https://www.pjrc.com/store/teensy40.html) and a
 [Pmod2](https://digilent.com/reference/pmod/pmodi2s2/start)!
 
-# The big idea
+# The Big Idea
 
-The biggest challenge in music is to have an unique sound that defines
-yourself. However, your tone depends on the gears you buy, and you can only get
-that tone by mixing and matching with whatever is available. What if you had a
-blank canvas to design your sound? What would you do with the possibility? What
-if the hardware and software was open-source?
+The biggest challenge in music is to have an _unique_ sound that defines *you*.
+However, your tone depends on the gears you buy, and you can only get that tone
+by mixing and matching with whatever is available. What if you had a blank
+canvas to design your sound? What would you do with the possibility? What if
+the hardware and software was open-source?
 
-# What this is
+# The Solution
 
 GuitarFx is a project that is currently developing a single instrument pedal
 kit based on [Arduino](https://www.arduino.cc/). It currently requires
