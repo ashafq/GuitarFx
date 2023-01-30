@@ -70,7 +70,8 @@ public:
     ABSEL = 2,
   };
 
-  Distortion() : FxBlockSimpleMono() {}
+  Distortion(float calibGainActive = 1.0F, float calibGainBypass = 1.0F)
+      : FxBlockSimpleMono(calibGainActive, calibGainBypass) {}
 
   void updateParameter(uint16_t id, uint16_t value) {
     switch (id) {

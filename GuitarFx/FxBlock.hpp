@@ -57,6 +57,8 @@ public:
 
   bool isStable() const { return isClose(target_, state_, THRESHOLD); }
 
+  float get() const { return state_; }
+
   void setTarget(float value) {
     assert(value >= 0.0F);
     target_ = value;
@@ -84,10 +86,11 @@ private:
 template <size_t numChannel = 1, size_t frameSize = AUDIO_BLOCK_SAMPLES>
 class FxBlock : public AudioStream {
 public:
-  FxBlock()
+  FxBlock(float calGainActive = 1.0F, float calGainBypass = 1.0F)
       : AudioStream(numChannel, channelBuffer_),
-        fxVolume_(0.0F), frameCounter_{0}, frameCount_{frameSize /
-                                                       AUDIO_BLOCK_SAMPLES} {
+        fxVolume_(0.0F), frameCounter_{0}, // clang-format: next line
+        frameCount_{frameSize / AUDIO_BLOCK_SAMPLES},
+        activeGain_{calGainActive}, bypassGain_{calGainBypass} {
     static_assert(numChannel >= 1, "Number of channel is not greater than 1");
     static_assert(frameSize >= AUDIO_BLOCK_SAMPLES,
                   "Frame size needs to be greater than audio block size");
@@ -95,6 +98,7 @@ public:
                   "Frame size needs to be a multiple of audio block size");
   }
 
+  // This method needs to be implemented by the derived class
   virtual void processAudio(void) = 0;
 
   float *getInputBuffer(size_t channel) {
@@ -116,24 +120,32 @@ public:
   void fxDisable() { fxVolume_.setTarget(0.0F); }
 
 private:
-  void convertAudioBockData(audio_block_t *block, size_t chan, size_t offset) {
+  void readAudioBockData(audio_block_t *block, size_t chan, size_t offset) {
     // Convert data block from int16 to float
     float *pin = getInputBuffer(chan) + offset;
     arm_q15_to_float(block->data, pin, AUDIO_BLOCK_SAMPLES);
+  }
 
+  void writeAudioBockData(audio_block_t *block, size_t chan, size_t offset) {
     // Convert data from float to int16
     float *pout = getOutputBuffer(chan) + offset;
+    // There are not dithering steps in this routine. After conducting
+    // several measurements and spectrum analysis, the ADC provides more
+    // than enough noise floor and dithering is not necessary.
     arm_float_to_q15(pout, block->data, AUDIO_BLOCK_SAMPLES);
   }
 
   void processAudioStateMachine(void) {
-    // Call the audio process callback
-    processAudio();
-
     // If volume is stable, then process a single gain value
     if (fxVolume_.isStable()) {
-      float fxVol = fxVolume_.update(); // Volume for effect
-      float byVol = (1.0F - fxVol);     // Volume for bypassed
+      float fxVol = fxVolume_.get();              // Volume for effect
+      float byVol = bypassGain_ * (1.0F - fxVol); // Volume for bypassed
+      fxVol *= activeGain_;
+
+      // Call the audio process callback if required
+      if (fxVol > 0.0F) {
+        processAudio();
+      }
 
       for (auto i = 0U; i < numChannel; ++i) {
         auto *ibuf = getInputBuffer(i);  // Input vector
@@ -144,6 +156,9 @@ private:
         }
       }
     } else {
+      // Call the audio process callback
+      processAudio();
+
       // Update gain sample by sample
       for (auto j = 0U; j < frameSize; ++j) {
         float fxVol = fxVolume_.update(); // Volume for effect
@@ -160,33 +175,57 @@ private:
 
   // Callback routine from AudioStream class
   virtual void update(void) {
-    // Probably counter intuitive, but the zero-th set of frames should be
-    // zeros or fully filled queue if frameCounter == 0. Call the virutal
-    // process audio function if frameCounter is zero.
-    if (frameCounter_ == 0) {
-      // processAudio();
-      processAudioStateMachine();
-    }
+    // No requeing necessary if frameSize is equal to AUDIO_BLOCK_SAMPLES
+    if (frameSize == AUDIO_BLOCK_SAMPLES) {
+      audio_block_t *block[numChannel];
 
-    // Write data block in framework
-    size_t chan = 0;
-    size_t offset = frameCounter_ * AUDIO_BLOCK_SAMPLES;
-
-    // Write the output block to output buffer in the framework
-    for (chan = 0; chan < numChannel; ++chan) {
-      audio_block_t *block = receiveWritable(chan);
-      if (block) {
-        convertAudioBockData(block, chan, offset);
-        transmit(block, chan);
-        release(block);
+      // Read audio block data
+      for (size_t chan = 0; chan < numChannel; ++chan) {
+        block[chan] = receiveWritable(chan);
+        if (block[chan]) {
+          readAudioBockData(block[chan], chan, 0);
+        }
       }
-    }
 
-    // Update frame counters
-    ++frameCounter_;
+      // Process audio callback
+      processAudioStateMachine();
 
-    if (frameCounter_ >= frameCount_) {
-      frameCounter_ = 0;
+      // Write the output block to output buffer in the framework
+      for (size_t chan = 0; chan < numChannel; ++chan) {
+        if (block[chan]) {
+          writeAudioBockData(block[chan], chan, 0);
+          transmit(block[chan], chan);
+          release(block[chan]);
+        }
+      }
+    } else {
+      // Probably counter intuitive, but the zero-th set of frames should be
+      // zeros or fully filled queue if frameCounter == 0. Call the virtual
+      // process audio function if frameCounter is zero.
+      if (frameCounter_ == 0) {
+        processAudioStateMachine();
+      }
+
+      // Write data block in framework
+      size_t offset = frameCounter_ * AUDIO_BLOCK_SAMPLES;
+
+      // Write the output block to output buffer in the framework
+      for (size_t chan = 0; chan < numChannel; ++chan) {
+        audio_block_t *block = receiveWritable(chan);
+        if (block) {
+          readAudioBockData(block, chan, offset);
+          writeAudioBockData(block, chan, offset);
+          transmit(block, chan);
+          release(block);
+        }
+      }
+
+      // Update frame counter circularly
+      ++frameCounter_;
+
+      if (frameCounter_ >= frameCount_) {
+        frameCounter_ = 0;
+      }
     }
   }
 
@@ -197,6 +236,8 @@ private:
   float audioOutBuffer_[numChannel * frameSize];
   size_t frameCounter_{0};
   size_t frameCount_{0};
+  float activeGain_{1.0F};
+  float bypassGain_{1.0F};
 };
 
 // Some easy to use block types, like 1 channel with same frame size
