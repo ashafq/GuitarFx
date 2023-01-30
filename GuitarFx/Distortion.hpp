@@ -87,7 +87,8 @@ public:
 
       // The distortion effect, with distortion blend in over-sampled space
       for (size_t i = 0; i < 4; ++i) {
-        tmp[i] = (blend * distortClassA(tmp[i])) + ((1.0F - blend) * distortClassB(tmp[i]));
+        tmp[i] = (blend * distortClassA(tmp[i])) +
+                 ((1.0F - blend) * distortClassB(tmp[i]));
       }
 
       // Down-sample and remove images
@@ -163,7 +164,6 @@ public:
 
     return std::copysign(v, x);
   }
-
 
   // Anti-aliasing and anti-imaging filter for oversampling
   static constexpr float coeff[] = {

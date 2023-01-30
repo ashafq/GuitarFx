@@ -124,7 +124,8 @@ float lowpass1(float in, float b0, float state) noexcept {
  * @param in Input value
  * @return float Output of the filter
  */
-inline float biquadFilter(const float coeff[5], float state[2], float in) noexcept{
+inline float biquadFilter(const float coeff[5], float state[2],
+                          float in) noexcept {
   float out = (coeff[0] * in) + state[0];
   state[0] = (coeff[1] * in) - (coeff[3] * out) + state[1];
   state[1] = (coeff[2] * in) - (coeff[4] * out);
