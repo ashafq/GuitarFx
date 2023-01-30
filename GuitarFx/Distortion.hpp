@@ -26,41 +26,6 @@
 #include "DspMath.hpp"
 #include "FxBlock.hpp"
 
-/**
- * @brief Emulate a class A style distortion, similar to a diode
- *  clipping circuit.
- *
- * @param x Input value
- *
- * @return float Input value distorted/wave-shaped
- */
-inline float distortClassA(float x) { return tanhFast(x); }
-
-/**
- * @brief Emulate a class B style distortion, similar to class B
- *  push-pull amplifier
- *
- * @param x Input value
- *
- * @return float Input value distorted/wave-shaped
- */
-inline float distortClassB(float x) {
-  constexpr float MAXVAL = 1.0F;
-  constexpr float MINVAL = -1.0F;
-  constexpr float HALF = 0.5F;
-  constexpr float TWO = 2.0F;
-
-  // Hard clip value [-1, 1]
-  x = std::clamp(x, MINVAL, MAXVAL);
-
-  auto u = std::abs(x);
-
-  // Class B style distortion
-  auto v = HALF * tanhFast(TWO * (u - HALF)) + HALF;
-
-  return std::copysign(v, x);
-}
-
 class Distortion : public FxBlockSimpleMono {
 public:
   static constexpr size_t NPARAM = 3U;
@@ -111,20 +76,26 @@ public:
 
   inline void run(float *pOut, const float *pIn, size_t size, float gain,
                   float blend, float tone) {
+    float tmp[4];
+
     for (size_t i = 0U; i < size; ++i) {
       float in = pIn[i];
-      float dIn = gain * in;
+      float dIn = gain * in; // Apply distortion gain
 
-      // The distortion effect
-      float dOutA = distortClassA(dIn);
-      float dOutB = distortClassB(dIn);
+      // Up-ssample and remove aliasing
+      upsample4(tmp, dIn, oversampleState_ + 0);
 
-      // Distortion blend
-      float blendOut = (blend * dOutA) + ((1.0F - blend) * dOutB);
+      // The distortion effect, with distortion blend in over-sampled space
+      for (size_t i = 0; i < 4; ++i) {
+        tmp[i] = (blend * distortClassA(tmp[i])) + ((1.0F - blend) * distortClassB(tmp[i]));
+      }
+
+      // Down-sample and remove images
+      float dOut = downsample4(tmp, oversampleState_ + 4);
 
       // Tone control
       float toneOut = toneState_;
-      toneState_ = lowpass1(blendOut, tone, toneState_);
+      toneState_ = lowpass1(dOut, tone, toneState_);
 
       // Write output sample
       pOut[i] = toneOut;
@@ -158,8 +129,85 @@ public:
     }
   }
 
+  /**
+   * @brief Emulate a class A style distortion, similar to a diode
+   *  clipping circuit.
+   *
+   * @param x Input value
+   *
+   * @return float Input value distorted/wave-shaped
+   */
+  static float distortClassA(float x) { return tanhFast(x); }
+
+  /**
+   * @brief Emulate a class B style distortion, similar to class B
+   *  push-pull amplifier
+   *
+   * @param x Input value
+   *
+   * @return float Input value distorted/wave-shaped
+   */
+  static float distortClassB(float x) {
+    constexpr float MAXVAL = 1.0F;
+    constexpr float MINVAL = -1.0F;
+    constexpr float HALF = 0.5F;
+    constexpr float TWO = 2.0F;
+
+    // Hard clip value [-1, 1]
+    x = std::clamp(x, MINVAL, MAXVAL);
+
+    auto u = std::abs(x);
+
+    // Class B style distortion
+    auto v = HALF * tanhFast(TWO * (u - HALF)) + HALF;
+
+    return std::copysign(v, x);
+  }
+
+
+  // Anti-aliasing and anti-imaging filter for oversampling
+  static constexpr float coeff[] = {
+      0.0769447F, 0.13180417F, 0.0769447F, -0.27368454F, 0.06816904F,
+      1.0F,       0.75755543F, 1.0F,       -0.52665081,  0.51825712F};
+
+  /**
+   * @brief Up-sample by a factor of 4
+   * @param out Output is 4x data as input
+   * @param in Input data
+   * @param state Anti-aliasing filter state
+   */
+  static void upsample4(float out[4], float in, float state[4]) {
+    // Sample and hold
+    out[3] = out[2] = out[1] = out[0] = in;
+
+    // Antialias filter
+    for (size_t i = 0; i < 4; ++i) {
+      out[i] = biquadFilter(coeff + 0, state + 0, out[i]);
+      out[i] = biquadFilter(coeff + 5, state + 2, out[i]);
+    }
+  }
+
+  /**
+   * @brief Down-sample by a factor of 4
+   * @param in Input sample 4x amount for single output
+   * @param state Anti-imaging filter state
+   * @return float Down-sample output
+   */
+  static float downsample4(float in[4], float state[4]) {
+    float out[4];
+
+    // Anti-image filter
+    for (size_t i = 0; i < 4; ++i) {
+      out[i] = biquadFilter(coeff + 0, state + 0, in[i]);
+      out[i] = biquadFilter(coeff + 5, state + 2, in[i]);
+    }
+
+    return out[0];
+  }
+
 private:
   FxSmoothParameter fxParam_[NPARAM]{};
+  float oversampleState_[8]{};
   float toneState_{0.0F};
 };
 

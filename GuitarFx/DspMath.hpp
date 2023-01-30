@@ -113,6 +113,25 @@ float lowpass1(float in, float b0, float state) noexcept {
 }
 
 /**
+ * @brief One stage biquad filter
+ *
+ * @details Implementation of a single stage biqad filter as shown below
+ *
+ * H(z) = (b0 + b1 * z^-1 + b2 * z^-2) / (1 + b1 * z^-1 + b2 * z^-2)
+ *
+ * @param[in] coeff Filter coefficients in [b0, b1, b2, a1, a2] form
+ * @param[in, out] state Filter states [w1, w2]
+ * @param in Input value
+ * @return float Output of the filter
+ */
+inline float biquadFilter(const float coeff[5], float state[2], float in) noexcept{
+  float out = (coeff[0] * in) + state[0];
+  state[0] = (coeff[1] * in) - (coeff[3] * out) + state[1];
+  state[1] = (coeff[2] * in) - (coeff[4] * out);
+  return out;
+}
+
+/**
  * @brief One pole low pass filter in fixedpoint
  *
  * @details Implementation of a single order low pass filter with unity gain
