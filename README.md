@@ -22,6 +22,12 @@ audio library. There is a a framework written on top of it to create your own
 sound. Currently, there are three parameter knobs supported, denoted `A`, `B`,
 `C`.
 
+# Build setup
+1. Download a copy of Arduino IDE 1.x (2.x is still not supported for this
+   project) from the [Arduino Website](https://www.arduino.cc/en/software)
+1. Get Teensyduino addon from [PJRC's Website](https://www.pjrc.com/teensy/td_download.html)
+1. Open `GuitarFx/GuitarFx.ino` on Arduino IDE, and click verify and upload
+
 # Example effects
 
 ## Distortion
