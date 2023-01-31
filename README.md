@@ -22,6 +22,9 @@ audio library. There is a a framework written on top of it to create your own
 sound. Currently, there are three parameter knobs supported, denoted `A`, `B`,
 `C`.
 
+# Hardware Setup
+![Schematic](Schematic/GuitarFx.png)
+
 # Build setup
 1. Download a copy of Arduino IDE 1.x (2.x is still not supported for this
    project) from the [Arduino Website](https://www.arduino.cc/en/software)
