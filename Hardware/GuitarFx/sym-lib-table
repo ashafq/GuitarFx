@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "teensy")(type "Legacy")(uri "${KIPRJMOD}/libs/teensy_library/teensy.lib")(options "")(descr ""))
+  (lib (name "GuitarFx")(type "KiCad")(uri "${KIPRJMOD}/libs/GuitarFx.kicad_sym")(options "")(descr ""))
+)
